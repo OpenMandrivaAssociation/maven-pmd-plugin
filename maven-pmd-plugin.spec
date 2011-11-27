@@ -1,6 +1,6 @@
 Name:           maven-pmd-plugin
 Version:        2.5
-Release:        3
+Release:        5
 Summary:        Maven PMD Plugin
 
 Group:          Development/Java
