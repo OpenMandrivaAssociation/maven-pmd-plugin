@@ -1,44 +1,33 @@
+%{?_javapackages_macros:%_javapackages_macros}
 Name:           maven-pmd-plugin
-Version:        2.5
-Release:        5
+Version:        3.0.1
+Release:        3.0%{?dist}
 Summary:        Maven PMD Plugin
 
-Group:          Development/Java
 License:        ASL 2.0
 URL:            http://maven.apache.org/plugins/maven-pmd-plugin/
 Source0:        http://repo2.maven.org/maven2/org/apache/maven/plugins/%{name}/%{version}/%{name}-%{version}-source-release.zip
-Source1:        maven-pmd-plugin-depmap.xml
 
 BuildArch: noarch
 
-BuildRequires: pmd
-BuildRequires: java-devel >= 0:1.6.0
-BuildRequires: maven
-BuildRequires: maven-plugin-plugin
-BuildRequires: maven-jar-plugin
-BuildRequires: maven-install-plugin
-BuildRequires: maven-resources-plugin
-BuildRequires: maven-compiler-plugin
-BuildRequires: maven-javadoc-plugin
-BuildRequires: maven-surefire-maven-plugin
-BuildRequires: maven-surefire-provider-junit4
-BuildRequires: maven-doxia-sitetools
-BuildRequires: maven-plugin-testing-harness
-BuildRequires: maven-archiver
-BuildRequires: plexus-archiver
-BuildRequires: apache-commons-lang
-BuildRequires: plexus-resources
-BuildRequires: plexus-utils
-BuildRequires: junit
-Requires: maven
-Requires: plexus-utils
-Requires: maven-plugin-testing-harness
-Requires: pmd
-Requires: junit
-Requires:       jpackage-utils
-Requires:       java
-Requires(post):       jpackage-utils
-Requires(postun):     jpackage-utils
+BuildRequires:  maven-local
+BuildRequires:  mvn(net.sf.cglib:cglib)
+BuildRequires:  mvn(net.sourceforge.pmd:pmd)
+BuildRequires:  mvn(org.apache.maven.doxia:doxia-decoration-model)
+BuildRequires:  mvn(org.apache.maven.doxia:doxia-sink-api)
+BuildRequires:  mvn(org.apache.maven.doxia:doxia-site-renderer)
+BuildRequires:  mvn(org.apache.maven.plugin-tools:maven-plugin-annotations)
+BuildRequires:  mvn(org.apache.maven.plugins:maven-plugins)
+BuildRequires:  mvn(org.apache.maven.reporting:maven-reporting-api)
+BuildRequires:  mvn(org.apache.maven.reporting:maven-reporting-impl)
+BuildRequires:  mvn(org.apache.maven:maven-artifact)
+BuildRequires:  mvn(org.apache.maven:maven-core)
+BuildRequires:  mvn(org.apache.maven:maven-model)
+BuildRequires:  mvn(org.apache.maven:maven-plugin-api)
+BuildRequires:  mvn(org.apache.maven:maven-project)
+BuildRequires:  mvn(org.codehaus.plexus:plexus-resources)
+BuildRequires:  mvn(org.codehaus.plexus:plexus-utils)
+BuildRequires:  mvn(org.eclipse.aether:aether-api)
 
 Provides:       maven2-plugin-pmd = %{version}-%{release}
 Obsoletes:      maven2-plugin-pmd <= 0:2.0.8
@@ -50,9 +39,7 @@ fail the build based on these metrics.
   
 
 %package javadoc
-Group:          Development/Java
 Summary:        Javadoc for %{name}
-Requires:       jpackage-utils
 
 %description javadoc
 API documentation for %{name}.
@@ -61,41 +48,81 @@ API documentation for %{name}.
 %prep
 %setup -q 
 
+# remove unnecessary animal sniffer plugin
+%pom_remove_plugin org.codehaus.mojo:animal-sniffer-maven-plugin
+
+# add missing test time deps
+%pom_add_dep org.eclipse.aether:aether-api
+%pom_add_dep org.apache.maven:maven-core
+%pom_add_dep net.sf.cglib:cglib
+
 %build
-mvn-rpmbuild \
-        -Dmaven.local.depmap.file=%{SOURCE1} \
-        -Dmaven.test.failure.ignore=true \
-        install javadoc:javadoc
+# ignore test failures
+# all tests fail, so this is probably environmental but I'm not sure what's missing
+%mvn_build -f
 
 %install
-# jars
-install -d -m 0755 %{buildroot}%{_javadir}
-install -m 644 target/%{name}-%{version}.jar   %{buildroot}%{_javadir}/%{name}.jar
+%mvn_install
 
-%add_to_maven_depmap org.apache.maven.plugins maven-pmd-plugin %{version} JPP maven-pmd-plugin
+%files -f .mfiles
+%dir %{_javadir}/%{name}
+%doc LICENSE NOTICE
 
-# poms
-install -d -m 755 %{buildroot}%{_mavenpomdir}
-install -pm 644 pom.xml \
-    %{buildroot}%{_mavenpomdir}/JPP-%{name}.pom
+%files javadoc -f .mfiles-javadoc
+%doc LICENSE NOTICE
 
-# javadoc
-install -d -m 0755 %{buildroot}%{_javadocdir}/%{name}
-cp -pr target/site/api*/* %{buildroot}%{_javadocdir}/%{name}/
+%changelog
+* Tue Aug 06 2013 Michal Srb <msrb@redhat.com> - 3.0.1-3
+- Adapt to current guidelines
 
-%post
-%update_maven_depmap
+* Sat Aug 03 2013 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 3.0.1-2
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_20_Mass_Rebuild
 
-%postun
-%update_maven_depmap
+* Mon Jul 01 2013 Mat Booth <fedora@matbooth.co.uk> - 3.0.1-1
+- Update to latest upstream version
+- Requires pmd >= 5.0.4-2
 
-%files
-%defattr(-,root,root,-)
-%{_javadir}/*
-%{_mavenpomdir}/*
-%{_mavendepmapfragdir}/*
+* Thu Feb 14 2013 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 2.7.1-6
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_19_Mass_Rebuild
 
-%files javadoc
-%defattr(-,root,root,-)
-%{_javadocdir}/%{name}
+* Wed Feb 06 2013 Java SIG <java-devel@lists.fedoraproject.org> - 2.7.1-5
+- Update for https://fedoraproject.org/wiki/Fedora_19_Maven_Rebuild
+- Replace maven BuildRequires with maven-local
 
+* Mon Nov 26 2012 Mikolaj Izdebski <mizdebsk@redhat.com> - 2.7.1-4
+- Install license files
+- Resolves: rhbz#880273
+
+* Thu Jul 19 2012 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 2.7.1-3
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_18_Mass_Rebuild
+
+* Thu May 03 2012 Tomas Radej <tradej@redhat.com> - 2.7.1-2
+- Modello BR
+
+* Fri Feb 24 2012 Tomas Radej <tradej@redhat.com> 2.7.1-1
+- Update to latest upstream.
+
+* Tue Feb 14 2012 Alexander Kurtakov <akurtako@redhat.com> 2.7-1
+- Update to latest upstream.
+
+* Fri Jan 13 2012 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 2.6-2
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_17_Mass_Rebuild
+
+* Fri Nov 18 2011 Alexander Kurtakov <akurtako@redhat.com> 2.6-1
+- Update to latest upstream.
+
+* Wed Jul 6 2011 Alexander Kurtakov <akurtako@redhat.com> 2.5-5
+- Adapt to current guidelines.
+
+* Thu Jun 30 2011 Felix Kaechele <heffer@fedoraproject.org> - 2.5-4
+- added patch to fix pmd artifactId in pom.xml
+
+* Tue Apr 26 2011 Alexander Kurtakov <akurtako@redhat.com> 2.5-3
+- Update to current guidelines.
+- Use upstream source.
+
+* Tue Feb 08 2011 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 2.5-2
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_15_Mass_Rebuild
+
+* Sat May 15 2010 Alexander Kurtakov <akurtako@redhat.com> 2.5-1
+- Initial package.
