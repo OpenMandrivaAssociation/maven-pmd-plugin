@@ -1,7 +1,7 @@
 %{?_javapackages_macros:%_javapackages_macros}
 Name:           maven-pmd-plugin
 Version:        3.0.1
-Release:        3.1
+Release:        3.2
 Summary:        Maven PMD Plugin
 Group:	Development/Java
 License:        ASL 2.0
